@@ -1,0 +1,62 @@
+{
+  "jahr": 2024,
+  "cluster_name": "Gemischte_Flotte",
+  "fahrzeuge": [
+    {
+      "name": "eActros_600",
+      "anzahl": 8,
+      "akku_kapazitaet_kwh": 600,
+      "verbrauch_kwh_pro_km": 1.0,
+      "zeitverzerrung": {
+        "typ": "normal",
+        "stddev_minuten": 20,
+        "max_abweichung_minuten": 60,
+        "seed": 300
+      },
+      "wochenplan": {
+        "Mo": { "tour": { "km": 350, "abfahrt": "04:30", "rueckkehr": "16:30" } },
+        "Di": { "tour": { "km": 400, "abfahrt": "04:00", "rueckkehr": "17:00" } },
+        "Mi": { "mehrtagstour": { "km": 800, "abfahrt": "04:00", "rueckkehr_uhr": "20:00", "tage_später": 1 } },
+        "Do": { "steht": true },
+        "Fr": { "tour": { "km": 300, "abfahrt": "05:00", "rueckkehr": "15:00" } },
+        "Sa": { "steht": true },
+        "So": { "steht": true }
+      }
+    },
+    {
+      "name": "eVito",
+      "anzahl": 12,
+      "akku_kapazitaet_kwh": 100,
+      "verbrauch_kwh_pro_km": 0.25,
+      "zeitverzerrung": {
+        "typ": "uniform",
+        "max_abweichung_minuten": 30,
+        "seed": 400
+      },
+      "wochenplan": {
+        "Mo": { "tour": { "km": 120, "abfahrt": "08:00", "rueckkehr": "17:00" } },
+        "Di": { "tour": { "km": 150, "abfahrt": "07:30", "rueckkehr": "18:30" } },
+        "Mi": { "tour": { "km": 100, "abfahrt": "09:00", "rueckkehr": "16:00" } },
+        "Do": { "tour": { "km": 180, "abfahrt": "07:00", "rueckkehr": "19:00" } },
+        "Fr": { "tour": { "km": 90, "abfahrt": "10:00", "rueckkehr": "15:00" } },
+        "Sa": { "steht": true },
+        "So": { "steht": true }
+      }
+    },
+    {
+      "name": "eSprinter",
+      "anzahl": 6,
+      "akku_kapazitaet_kwh": 55,
+      "verbrauch_kwh_pro_km": 0.35,
+      "wochenplan": {
+        "Mo": { "tour": { "km": 80, "abfahrt": "09:00", "rueckkehr": "16:00" } },
+        "Di": { "tour": { "km": 110, "abfahrt": "08:30", "rueckkehr": "17:30" } },
+        "Mi": { "tour": { "km": 65, "abfahrt": "10:00", "rueckkehr": "15:00" } },
+        "Do": { "tour": { "km": 95, "abfahrt": "08:00", "rueckkehr": "17:00" } },
+        "Fr": { "tour": { "km": 70, "abfahrt": "11:00", "rueckkehr": "16:00" } },
+        "Sa": { "nicht_verfügbar": true },
+        "So": { "nicht_verfügbar": true }
+      }
+    }
+  ]
+}

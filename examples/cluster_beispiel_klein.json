@@ -1,0 +1,27 @@
+{
+  "jahr": 2024,
+  "cluster_name": "LIS_Cluster_1",
+  "fahrzeuge": [
+    {
+      "name": "eActros_600",
+      "anzahl": 16,
+      "akku_kapazitaet_kwh": 600,
+      "verbrauch_kwh_pro_km": 1.0,
+      "zeitverzerrung": {
+        "typ": "normal",
+        "stddev_minuten": 30,
+        "max_abweichung_minuten": 90,
+        "seed": 100
+      },
+      "wochenplan": {
+        "Mo": { "tour": { "km": 300, "abfahrt": "05:00", "rueckkehr": "16:00" } },
+        "Di": { "tour": { "km": 300, "abfahrt": "05:00", "rueckkehr": "16:00" } },
+        "Mi": { "tour": { "km": 300, "abfahrt": "05:00", "rueckkehr": "16:00" } },
+        "Do": { "tour": { "km": 300, "abfahrt": "05:00", "rueckkehr": "16:00" } },
+        "Fr": { "tour": { "km": 300, "abfahrt": "05:00", "rueckkehr": "16:00" } },
+        "Sa": { "steht": true },
+        "So": { "steht": true }
+      }
+    }
+  ]
+}

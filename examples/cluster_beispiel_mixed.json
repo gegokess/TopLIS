@@ -1,0 +1,26 @@
+{
+  "jahr": 2024,
+  "cluster_name": "Klein_Flotte",
+  "fahrzeuge": [
+    {
+      "name": "eVito",
+      "anzahl": 5,
+      "akku_kapazitaet_kwh": 100,
+      "verbrauch_kwh_pro_km": 0.25,
+      "zeitverzerrung": {
+        "typ": "uniform",
+        "max_abweichung_minuten": 45,
+        "seed": 200
+      },
+      "wochenplan": {
+        "Mo": { "tour": { "km": 120, "abfahrt": "08:00", "rueckkehr": "17:00" } },
+        "Di": { "tour": { "km": 150, "abfahrt": "07:30", "rueckkehr": "18:30" } },
+        "Mi": { "tour": { "km": 100, "abfahrt": "09:00", "rueckkehr": "16:00" } },
+        "Do": { "tour": { "km": 180, "abfahrt": "07:00", "rueckkehr": "19:00" } },
+        "Fr": { "tour": { "km": 90, "abfahrt": "10:00", "rueckkehr": "15:00" } },
+        "Sa": { "nicht_verfügbar": true },
+        "So": { "steht": true }
+      }
+    }
+  ]
+}

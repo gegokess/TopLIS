@@ -1,0 +1,83 @@
+{
+  "jahr": 2024,
+  "cluster_name": "LIS_Cluster_2_3_mit_Zeitverzerrung",
+  "fahrzeuge": [
+    {
+      "name": "PKW_Normalverteilung",
+      "anzahl": 10,
+      "akku_kapazitaet_kwh": 70,
+      "verbrauch_kwh_pro_km": 0.2,
+      "zeitverzerrung": {
+        "typ": "normal",
+        "stddev_minuten": 8,
+        "max_abweichung_minuten": 20,
+        "seed": 42
+      },
+      "wochenplan": {
+        "Mo": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Di": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Mi": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Do": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Fr": {
+          "mehrtagstour": {
+            "km": 100,                
+            "abfahrt": "17:00",      
+            "rueckkehr_uhr": "09:00",
+            "tage_später": 3          
+          }
+        },
+        "Sa": { "nicht_verfügbar": true },
+        "So": { "nicht_verfügbar": true }
+      }
+    },
+    {
+      "name": "PKW_Gleichverteilung",
+      "anzahl": 6,
+      "akku_kapazitaet_kwh": 70,
+      "verbrauch_kwh_pro_km": 0.2,
+      "zeitverzerrung": {
+        "typ": "uniform",
+        "max_abweichung_minuten": 15,
+        "seed": 123
+      },
+      "wochenplan": {
+        "Mo": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Di": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Mi": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Do": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Fr": {
+          "mehrtagstour": {
+            "km": 100,                
+            "abfahrt": "17:00",      
+            "rueckkehr_uhr": "09:00",
+            "tage_später": 3          
+          }
+        },
+        "Sa": { "nicht_verfügbar": true },
+        "So": { "nicht_verfügbar": true }
+      }
+    },
+    {
+      "name": "PKW_ohne_Verzerrung",
+      "anzahl": 4,
+      "akku_kapazitaet_kwh": 70,
+      "verbrauch_kwh_pro_km": 0.2,
+      "wochenplan": {
+        "Mo": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Di": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Mi": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Do": { "tour": { "km": 100, "abfahrt": "17:00", "rueckkehr": "09:00" } },
+        "Fr": {
+          "mehrtagstour": {
+            "km": 100,                
+            "abfahrt": "17:00",      
+            "rueckkehr_uhr": "09:00",
+            "tage_später": 3          
+          }
+        },
+        "Sa": { "nicht_verfügbar": true },
+        "So": { "nicht_verfügbar": true }
+      }
+    }
+  ]
+}
