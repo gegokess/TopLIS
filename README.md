@@ -79,10 +79,11 @@ Erstellen Sie eine JSON-Datei mit dem Prefix `cluster_` (z.B. `cluster_beispiel.
 ### 3. Zeitreihen generieren
 
 ```bash
-python emob_timeseries.py [--config config.json]
+python emob_timeseries.py
 ```
 
-Die Zeitauflösung wird über `freq` in der Konfigurationsdatei gesteuert (Standard `1h`).
+Die Zeitauflösung wird über `freq` in der Datei `config.json` gesteuert (Standard `1h`).
+Die Datei wird automatisch aus dem aktuellen Verzeichnis gelesen.
 
 Das Script verarbeitet automatisch alle `cluster_*.json` Dateien im aktuellen Verzeichnis und erstellt entsprechende CSV-Dateien.
 

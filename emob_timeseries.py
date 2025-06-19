@@ -5,8 +5,8 @@ emob_cluster_timeseries.py (überarbeitet)
 ===========================
 Erzeugt CSV-Zeitreihen für die TOP-Energy®-Komponente
 »Elektromobilität« aus mehreren Cluster-JSON-Dateien.
-Die zeitliche Auflösung kann über einen Parameter gewählt werden
-(Standard: stündlich).
+Die zeitliche Auflösung wird über eine zentrale Konfigurationsdatei
+("config.json") gewählt (Standard: stündlich).
 
 Funktionsweise angepasst: initial volle Kapazität und Subtraktion von
 Abwesenheitsfenstern; Energiebedarf im letzten verfügbaren Zeitschritt
@@ -20,7 +20,6 @@ from datetime import date, datetime, time, timedelta as td
 from pathlib import Path
 from typing import Dict, Any, List
 import random
-import argparse
 
 import pandas as pd
 import numpy as np
@@ -29,6 +28,9 @@ import numpy as np
 # Konfiguration
 # ---------------------------------------------------------------------------
 WD = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]  # Monday = 0 … Sunday = 6
+
+# Standardpfad zur zentralen Konfigurationsdatei
+DEFAULT_CONFIG = "config.json"
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -586,19 +588,8 @@ def _handle_multiday_sub(
 # Hauptprogramm
 # ---------------------------------------------------------------------------
 
-
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Erzeuge E-Mobility-Zeitreihen aus Clusterdateien"
-    )
-    parser.add_argument(
-        "--config",
-        default="config.json",
-        help="Pfad zur zentralen Konfigurationsdatei (Standard: config.json)",
-    )
-    args = parser.parse_args()
-
-    config_path = Path(args.config)
+    config_path = Path(DEFAULT_CONFIG)
     if not config_path.is_file():
         logger.error(f"Konfigurationsdatei {config_path} nicht gefunden")
         return 1
