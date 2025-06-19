@@ -1,6 +1,6 @@
 # E-Mobility Cluster Timeseries Generator
 
-Ein Python-Tool zur Generierung stündlicher CSV-Zeitreihen für die TOP-Energy®-Komponente "Elektromobilität" aus Cluster-JSON-Konfigurationsdateien.
+Ein Python-Tool zur Generierung zeitlich aufgelöster CSV-Zeitreihen (standardmäßig stündlich) für die TOP-Energy®-Komponente "Elektromobilität" aus Cluster-JSON-Konfigurationsdateien.
 
 ## 🚀 Features
 
@@ -9,7 +9,7 @@ Ein Python-Tool zur Generierung stündlicher CSV-Zeitreihen für die TOP-Energy�
 - **Mehrere Fahrzeugtypen**: Verschiedene Akkukapazitäten und Verbrauchswerte pro Cluster
 - **Tages- und Mehrtagestouren**: Flexible Tourenplanung mit Wochenplänen
 - **Validierung**: Umfassende Eingabevalidierung für robuste Verarbeitung
-- **Stündliche Auflösung**: CSV-Export mit Datum, Zeit, verfügbarer Kapazität, Energiebedarf und Restenergie
+- **Wählbare Auflösung**: Standard ist stündlich, das Intervall wird über eine zentrale Konfigurationsdatei eingestellt
 
 ## 📋 Anforderungen
 
@@ -32,13 +32,23 @@ pip install -r requirements.txt
 
 ## 🎯 Verwendung
 
-### 1. Cluster-Konfiguration erstellen
+### 1. Allgemeine Konfiguration erstellen
+
+Legen Sie eine Datei `config.json` an, in der Jahr und Zeitaufl\u00f6sung festgelegt werden:
+
+```json
+{
+  "jahr": 2024,
+  "freq": "1h"
+}
+```
+
+### 2. Cluster-Konfiguration erstellen
 
 Erstellen Sie eine JSON-Datei mit dem Prefix `cluster_` (z.B. `cluster_beispiel.json`):
 
 ```json
 {
-  "jahr": 2024,
   "cluster_name": "LIS_Cluster_1",
   "fahrzeuge": [
     {
@@ -66,15 +76,18 @@ Erstellen Sie eine JSON-Datei mit dem Prefix `cluster_` (z.B. `cluster_beispiel.
 }
 ```
 
-### 2. Zeitreihen generieren
+### 3. Zeitreihen generieren
 
 ```bash
-python emob_cluster_timeseries.py
+python emob_timeseries.py
 ```
+
+Die Zeitauflösung wird über `freq` in der Datei `config.json` gesteuert (Standard `1h`).
+Die Datei wird automatisch aus dem aktuellen Verzeichnis gelesen.
 
 Das Script verarbeitet automatisch alle `cluster_*.json` Dateien im aktuellen Verzeichnis und erstellt entsprechende CSV-Dateien.
 
-### 3. Ausgabe
+### 4. Ausgabe
 
 Für jede Cluster-Datei wird eine CSV-Datei erstellt:
 - Format: `{Jahr}_{Cluster_Name}_emob_timeseries.csv`
