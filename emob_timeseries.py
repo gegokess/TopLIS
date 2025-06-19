@@ -3,8 +3,10 @@
 """
 emob_cluster_timeseries.py (überarbeitet)
 ===========================
-Erzeugt stündliche CSV-Zeitreihen für die TOP-Energy®-Komponente
+Erzeugt CSV-Zeitreihen für die TOP-Energy®-Komponente
 »Elektromobilität« aus mehreren Cluster-JSON-Dateien.
+Die zeitliche Auflösung wird über eine zentrale Konfigurationsdatei
+("config.json") gewählt (Standard: stündlich).
 
 Funktionsweise angepasst: initial volle Kapazität und Subtraktion von
 Abwesenheitsfenstern; Energiebedarf im letzten verfügbaren Zeitschritt
@@ -26,6 +28,9 @@ import numpy as np
 # Konfiguration
 # ---------------------------------------------------------------------------
 WD = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]  # Monday = 0 … Sunday = 6
+
+# Standardpfad zur zentralen Konfigurationsdatei
+DEFAULT_CONFIG = "config.json"
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -59,14 +64,12 @@ def days_of_year(year: int):
 
 
 def validate_cluster_config(cfg: Dict[str, Any], cluster_name: str) -> None:
-    keys = ["jahr", "cluster_name", "fahrzeuge"]
+    """Prüft die Cluster-spezifische Konfiguration ohne Jahr."""
+    keys = ["cluster_name", "fahrzeuge"]
     for k in keys:
         if k not in cfg:
             raise ValueError(
                 f"Cluster '{cluster_name}': Fehlender Schlüssel '{k}'")
-    if not isinstance(cfg["jahr"], int) or not (2000 <= cfg["jahr"] <= 3000):
-        raise ValueError(
-            f"Cluster '{cluster_name}': Ungültiges Jahr: {cfg['jahr']}")
     if not isinstance(cfg["cluster_name"], str) or not cfg["cluster_name"].strip():
         raise ValueError(
             f"Cluster '{cluster_name}': 'cluster_name' muss nicht-leerer String sein")
@@ -227,15 +230,25 @@ def apply_time_deviation(base_time: time, deviation_minutes: int) -> time:
 # ---------------------------------------------------------------------------
 
 
-def build_cluster_timeseries(cfg: Dict[str, Any], cluster_name: str) -> pd.DataFrame:
-    year = cfg["jahr"]
+def build_cluster_timeseries(
+    cfg: Dict[str, Any], cluster_name: str, year: int, freq: str = "1h"
+) -> pd.DataFrame:
     logger.info(f"Erstelle Zeitreihe Cluster {cluster_name} Jahr {year}")
 
+    freq_delta = pd.Timedelta(freq)
+
     # Zeitreihe nur für das angegebene Jahr erstellen
-    idx = pd.date_range(f"{year}-01-01 00:00",
-                        f"{year}-12-31 23:00", freq="1h", inclusive="both")
-    df = pd.DataFrame(0.0, index=idx, columns=[
-                      "available_capacity_kWh", "energy_demand_kWh", "rest_energy_kWh"])
+    idx = pd.date_range(
+        f"{year}-01-01 00:00",
+        f"{year + 1}-01-01 00:00",
+        freq=freq,
+        inclusive="left",
+    )
+    df = pd.DataFrame(
+        0.0,
+        index=idx,
+        columns=["available_capacity_kWh", "energy_demand_kWh", "rest_energy_kWh"],
+    )
 
     # Berechne die ersten und letzten beiden Tage des Jahres
     first_jan = date(year, 1, 1)
@@ -256,8 +269,8 @@ def build_cluster_timeseries(cfg: Dict[str, Any], cluster_name: str) -> pd.DataF
         for day in days_of_year(year):
             if day not in exclusion_days:
                 start_ts = pd.Timestamp.combine(day, time.min)
-                end_ts = pd.Timestamp.combine(day, time(23, 0))
-                df.loc[start_ts:end_ts, "available_capacity_kWh"] += cap*n
+                end_ts = start_ts + td(days=1) - freq_delta
+                df.loc[start_ts:end_ts, "available_capacity_kWh"] += cap * n
 
         # Verarbeite nur Tage außerhalb der Ausschlussbereiche
         for day in days_of_year(year):
@@ -270,14 +283,32 @@ def build_cluster_timeseries(cfg: Dict[str, Any], cluster_name: str) -> pd.DataF
 
             if e.get("nicht_verfügbar"):
                 start_ts = pd.Timestamp.combine(day, time.min)
-                end_ts = pd.Timestamp.combine(day, time(23, 0))
-                df.loc[start_ts:end_ts, "available_capacity_kWh"] -= cap*n
+                end_ts = start_ts + td(days=1) - freq_delta
+                df.loc[start_ts:end_ts, "available_capacity_kWh"] -= cap * n
             elif "tour" in e:
                 _handle_tour_sub_with_deviation(
-                    df, day, e["tour"], n, cap, cons, year, zeitverzerrung_config)
+                    df,
+                    day,
+                    e["tour"],
+                    n,
+                    cap,
+                    cons,
+                    year,
+                    zeitverzerrung_config,
+                    freq,
+                )
             else:
-                _handle_multiday_sub_with_deviation(df, day, e.get(
-                    "mehrtagstour", {}), n, cap, cons, year, zeitverzerrung_config)
+                _handle_multiday_sub_with_deviation(
+                    df,
+                    day,
+                    e.get("mehrtagstour", {}),
+                    n,
+                    cap,
+                    cons,
+                    year,
+                    zeitverzerrung_config,
+                    freq,
+                )
 
         df["available_capacity_kWh"] = df["available_capacity_kWh"].clip(
             lower=0)
@@ -402,9 +433,17 @@ def _set_rest_energy_at_block_start(df: pd.DataFrame) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _handle_tour_sub_with_deviation(df: pd.DataFrame, day: date, t: Dict[str, Any],
-                                    n: int, cap: float, cons: float, year: int,
-                                    zeitverzerrung_config: Dict[str, Any]) -> None:
+def _handle_tour_sub_with_deviation(
+    df: pd.DataFrame,
+    day: date,
+    t: Dict[str, Any],
+    n: int,
+    cap: float,
+    cons: float,
+    year: int,
+    zeitverzerrung_config: Dict[str, Any],
+    freq: str,
+) -> None:
     """Behandelt Tagestouren mit Zeitverzerrung für einzelne Fahrzeuge."""
     km = float(t["km"])
     base_leave = hhmm(t["abfahrt"])
@@ -414,8 +453,9 @@ def _handle_tour_sub_with_deviation(df: pd.DataFrame, day: date, t: Dict[str, An
     leave_deviations = generate_time_deviations(n, zeitverzerrung_config)
     return_deviations = generate_time_deviations(n, zeitverzerrung_config)
 
+    freq_delta = pd.Timedelta(freq)
     year_start = pd.Timestamp(f"{year}-01-01")
-    year_end = pd.Timestamp(f"{year}-12-31 23:59:59")
+    year_end = pd.Timestamp(f"{year + 1}-01-01") - freq_delta
 
     # Verarbeite jedes Fahrzeug einzeln
     for i in range(n):
@@ -432,19 +472,19 @@ def _handle_tour_sub_with_deviation(df: pd.DataFrame, day: date, t: Dict[str, An
 
         try:
             # Reduziere verfügbare Kapazität während Abwesenheit
-            end_time = rt - td(hours=1)
+            end_time = rt - freq_delta
             if end_time >= lt:
                 mask = (df.index >= lt) & (df.index <= end_time)
                 df.loc[mask, "available_capacity_kWh"] -= cap
 
             # GEÄNDERT: Energiebedarf wird später am Block-Ende gesetzt
             # Sammle den Energiebedarf zunächst dort wo er ursprünglich gesetzt würde
-            ts_req = lt.floor("h") - td(hours=1)
+            ts_req = lt.floor(freq) - freq_delta
             if ts_req >= year_start and ts_req in df.index:
                 df.at[ts_req, "energy_demand_kWh"] += km * cons
 
             # Restenergie bei Rückkehr
-            rt_floor = rt.floor("h")
+            rt_floor = rt.floor(freq)
             if rt_floor <= year_end and rt_floor in df.index:
                 df.at[rt_floor, "rest_energy_kWh"] += max(cap - km * cons, 0.0)
 
@@ -453,9 +493,17 @@ def _handle_tour_sub_with_deviation(df: pd.DataFrame, day: date, t: Dict[str, An
             continue
 
 
-def _handle_multiday_sub_with_deviation(df: pd.DataFrame, day: date, t: Dict[str, Any],
-                                        n: int, cap: float, cons: float, year: int,
-                                        zeitverzerrung_config: Dict[str, Any]) -> None:
+def _handle_multiday_sub_with_deviation(
+    df: pd.DataFrame,
+    day: date,
+    t: Dict[str, Any],
+    n: int,
+    cap: float,
+    cons: float,
+    year: int,
+    zeitverzerrung_config: Dict[str, Any],
+    freq: str,
+) -> None:
     """Behandelt Mehrtagestouren mit Zeitverzerrung für einzelne Fahrzeuge."""
     km = float(t.get("km", 0))
     base_leave = hhmm(t.get("abfahrt", "00:00"))
@@ -466,8 +514,9 @@ def _handle_multiday_sub_with_deviation(df: pd.DataFrame, day: date, t: Dict[str
     leave_deviations = generate_time_deviations(n, zeitverzerrung_config)
     return_deviations = generate_time_deviations(n, zeitverzerrung_config)
 
+    freq_delta = pd.Timedelta(freq)
     year_start = pd.Timestamp(f"{year}-01-01")
-    year_end = pd.Timestamp(f"{year}-12-31 23:59:59")
+    year_end = pd.Timestamp(f"{year + 1}-01-01") - freq_delta
 
     # Verarbeite jedes Fahrzeug einzeln
     for i in range(n):
@@ -485,19 +534,19 @@ def _handle_multiday_sub_with_deviation(df: pd.DataFrame, day: date, t: Dict[str
 
         try:
             # Reduziere verfügbare Kapazität während Abwesenheit
-            end_time = rt - td(hours=1)
+            end_time = rt - freq_delta
             if end_time >= lt:
                 mask = (df.index >= lt) & (df.index <= end_time)
                 df.loc[mask, "available_capacity_kWh"] -= cap
 
             # GEÄNDERT: Energiebedarf wird später am Block-Ende gesetzt
             # Sammle den Energiebedarf zunächst dort wo er ursprünglich gesetzt würde
-            ts_req = lt.floor("h") - td(hours=1)
+            ts_req = lt.floor(freq) - freq_delta
             if ts_req >= year_start and ts_req in df.index:
                 df.at[ts_req, "energy_demand_kWh"] += km * cons
 
             # Restenergie bei Rückkehr
-            rt_floor = rt.floor("h")
+            rt_floor = rt.floor(freq)
             if rt_floor <= year_end and rt_floor in df.index:
                 df.at[rt_floor, "rest_energy_kWh"] += max(cap - km * cons, 0.0)
 
@@ -508,21 +557,56 @@ def _handle_multiday_sub_with_deviation(df: pd.DataFrame, day: date, t: Dict[str
 
 
 # Behalte die alten Funktionen für Rückwärtskompatibilität
-def _handle_tour_sub(df: pd.DataFrame, day: date, t: Dict[str, Any], n: int, cap: float, cons: float, year: int) -> None:
+def _handle_tour_sub(
+    df: pd.DataFrame,
+    day: date,
+    t: Dict[str, Any],
+    n: int,
+    cap: float,
+    cons: float,
+    year: int,
+    freq: str,
+) -> None:
     """Fallback-Funktion ohne Zeitverzerrung."""
-    _handle_tour_sub_with_deviation(df, day, t, n, cap, cons, year, {})
+    _handle_tour_sub_with_deviation(df, day, t, n, cap, cons, year, {}, freq)
 
 
-def _handle_multiday_sub(df: pd.DataFrame, day: date, t: Dict[str, Any], n: int, cap: float, cons: float, year: int) -> None:
+def _handle_multiday_sub(
+    df: pd.DataFrame,
+    day: date,
+    t: Dict[str, Any],
+    n: int,
+    cap: float,
+    cons: float,
+    year: int,
+    freq: str,
+) -> None:
     """Fallback-Funktion ohne Zeitverzerrung."""
-    _handle_multiday_sub_with_deviation(df, day, t, n, cap, cons, year, {})
+    _handle_multiday_sub_with_deviation(df, day, t, n, cap, cons, year, {}, freq)
 
 # ---------------------------------------------------------------------------
 # Hauptprogramm
 # ---------------------------------------------------------------------------
 
-
 def main() -> int:
+    config_path = Path(DEFAULT_CONFIG)
+    if not config_path.is_file():
+        logger.error(f"Konfigurationsdatei {config_path} nicht gefunden")
+        return 1
+
+    try:
+        main_cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.error(f"Fehler beim Lesen der Konfigurationsdatei: {e}")
+        return 1
+
+    year = main_cfg.get("jahr")
+    if not isinstance(year, int) or not (2000 <= year <= 3000):
+        logger.error("Ung\u00fcltiges oder fehlendes 'jahr' in der Konfiguration")
+        return 1
+
+    freq = str(main_cfg.get("freq", "1h"))
+
     try:
         d = Path(__file__).parent
         files = sorted(d.glob("cluster_*.json"))
@@ -534,9 +618,8 @@ def main() -> int:
             logger.info(f"Verarbeite Datei: {f.name}")
             cfg = json.loads(f.read_text(encoding="utf-8"))
             validate_cluster_config(cfg, f.stem)
-            dfc = build_cluster_timeseries(cfg, cfg["cluster_name"])
-            output_file = d / \
-                f"{cfg['jahr']}_{cfg['cluster_name']}_emob_timeseries.csv"
+            dfc = build_cluster_timeseries(cfg, cfg["cluster_name"], year, freq)
+            output_file = d / f"{year}_{cfg['cluster_name']}_emob_timeseries.csv"
             dfc.to_csv(output_file, sep=";", decimal=",", index=False)
             logger.info(f"Zeitreihe erfolgreich erstellt: {output_file.name}")
 
